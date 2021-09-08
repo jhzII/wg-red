@@ -5,9 +5,9 @@
     <title>wg-red</title>
 </head>
 <body>
-    <form>
-        <p>Выберете файл для загрузки</p>
-        <input type="file">
+    <form enctype="multipart/form-data" method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
         <input type="submit" value="Загрузить">
     </form>
 </body>
