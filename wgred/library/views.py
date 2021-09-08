@@ -1,5 +1,8 @@
-from django.shortcuts import render
+import math
 import re
+from django.http import HttpResponseRedirect
+from django.shortcuts import render
+from django.urls import reverse
 from .forms import UploadFileForm
 from .models import File, Word, WordFreq
 
@@ -8,8 +11,8 @@ def index(request):
     if request.method == 'POST':
         form = UploadFileForm(request.POST, request.FILES)
         if form.is_valid():
-            handle_uploaded_file(request.FILES['file'])
-            pass
+            file = handle_uploaded_file(request.FILES['file'])
+            return HttpResponseRedirect(reverse('by_file', kwargs={'file_id': file.pk}))
     else:
         form = UploadFileForm()
     return render(request, 'index.html', {'form': form})
@@ -43,3 +46,29 @@ def handle_uploaded_file(f):
                     word_freq.file = file
                     word_freq.word = word
             word_freq.save()
+
+    return file
+
+
+def by_file(request, file_id):
+    file = File.objects.get(pk=file_id)
+    number_of_files = File.objects.count()
+
+    wfs = WordFreq.objects.filter(file=file)
+
+    words = []
+
+    for wf in wfs:
+        words.append({
+            'name': wf.word.name,
+            'freq': wf.freq,
+            'idf': math.log(number_of_files / WordFreq.objects.filter(word=wf.word).count())
+        })
+
+    words.sort(key=lambda d: d['idf'], reverse=True)
+
+    context = {
+        'name': file.name,
+        'words': words[:50],
+    }
+    return render(request, 'by_file.html', context)
